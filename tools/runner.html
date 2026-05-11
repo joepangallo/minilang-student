@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MiniLang WAT runner</title>
+<style>
+    body { font: 14px/1.5 -apple-system, sans-serif; margin: 24px; max-width: 900px; }
+    h1 { font-size: 20px; margin: 0 0 4px; }
+    p  { color: #555; margin: 0 0 16px; }
+    textarea {
+        width: 100%; min-height: 320px;
+        font: 13px/1.5 ui-monospace, Menlo, monospace;
+        padding: 10px; border: 1px solid #ccc; border-radius: 4px;
+        background: #fafafa; resize: vertical;
+    }
+    button {
+        margin-top: 10px; padding: 8px 16px;
+        background: #7a1f2b; color: white; border: none; border-radius: 4px;
+        font: 600 14px sans-serif; cursor: pointer;
+    }
+    button:hover { background: #5e1721; }
+    pre.output {
+        margin-top: 16px; padding: 12px; min-height: 60px;
+        background: #1e1e1e; color: #e8e8e8;
+        font: 13px/1.5 ui-monospace, Menlo, monospace;
+        border-radius: 4px; white-space: pre-wrap;
+    }
+    pre.output.err { color: #ff8080; }
+</style>
+</head>
+<body>
+
+<h1>MiniLang WAT runner</h1>
+<p>
+    Paste the output of <code>python minilang.py wat FILE.ml</code> below.
+    Click <b>Run</b>. The WAT is assembled to wasm in your browser
+    (via <a href="https://github.com/AssemblyScript/wabt.js">wabt.js</a>) and run with
+    <code>env.print</code> wired to this page so you can see what your
+    program prints.
+</p>
+
+<textarea id="src" spellcheck="false">(module
+  (import "env" "print" (func $print (param i32)))
+  (func $main (export "main")
+    i32.const 42
+    call $print
+  )
+  (start $main)
+)
+</textarea>
+
+<button id="run">Run</button>
+<pre class="output" id="out">(output will appear here)</pre>
+
+<!-- wabt.js compiled to wasm; loads its own WebAssembly under the hood. -->
+<script src="https://cdn.jsdelivr.net/npm/wabt@1.0.36/index.js"></script>
+<script>
+const srcEl = document.getElementById("src");
+const outEl = document.getElementById("out");
+const btn   = document.getElementById("run");
+
+let wabt = null;     // populated on first run
+
+btn.addEventListener("click", async () => {
+    outEl.classList.remove("err");
+    outEl.textContent = "";
+
+    try {
+        // Step 1: WAT -> wasm bytes, using the in-browser wabt build.
+        if (!wabt) wabt = await WabtModule();
+        const module = wabt.parseWat("input.wat", srcEl.value);
+        const wasm = module.toBinary({}).buffer;
+
+        // Step 2: instantiate the wasm, providing env.print.
+        const imports = {
+            env: {
+                print: (v) => { outEl.textContent += v + "\n"; },
+            },
+        };
+        await WebAssembly.instantiate(wasm, imports);
+        // `(start $main)` runs at instantiation, so all prints have already happened.
+        if (outEl.textContent === "") outEl.textContent = "(no output)";
+    } catch (err) {
+        outEl.classList.add("err");
+        outEl.textContent = "error: " + (err.message || err);
+    }
+});
+</script>
+</body>
+</html>
