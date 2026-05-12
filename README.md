@@ -48,6 +48,43 @@ is already wired up — you don't need to touch it.
 | M5–M7     | `src/wat_codegen.py`         | `wat` command (graded)    |
 | (optional)| `src/codegen.py`             | `build` (bytecode VM)     |
 
+## Running the full pipeline (after M5–M7)
+
+Once `wat_codegen.py` is done, the wasm pipeline runs end to end:
+
+```bash
+tools/run.sh examples/ladder/10-recursion.ml
+```
+
+`run.sh` pipes your emitted WAT through `wat2wasm` (the text-to-binary
+assembler, provided by the `wabt` npm package you installed on Day 1),
+instantiates the resulting module in Node.js, and prints whatever your
+program printed. If that output matches what
+`python3 minilang.py run examples/ladder/10-recursion.ml` produced for
+the same file, your back end and your interpreter agree on the
+semantics — which is exactly the standard `tools/check.py` grades you
+against for M5–M7.
+
+## About the optional bytecode VM
+
+`src/codegen.py` is a sidetrack, not a milestone you have to do. It
+lowers the AST to a tiny stack-based bytecode and runs it on a small
+Python VM:
+
+```bash
+python3 minilang.py build examples/ladder/02-arithmetic.ml
+```
+
+You'll see the bytecode listing and then the program's output. It's
+useful for two reasons. First, wasm is *also* a stack machine, so once
+your bytecode compiler works, lowering to wasm in M5–M7 is the same
+problem with different mnemonics — the hard part (turning a tree into
+a linear push/pop sequence) is already done. Second, the bytecode is
+easier to read than WAT when you're debugging your compilation
+strategy. Skip it if you're tight on time; do it if your wasm output
+isn't matching the interpreter and you want a halfway step to debug
+in.
+
 ## Where the BNF lives
 
 Each method in `parser.py` has its grammar production written in a
