@@ -99,6 +99,19 @@ class Compiler:
         # Return: compile expr (or PUSH 0); RET
         # Print:  compile expr; PRINT
         # ExprStmt: compile expr (leave result on stack; VM tolerates)
+        # For Let, compile the initializer so its value is on the VM stack.
+        # Declare the variable to get its mangled storage name.
+        # Emit STORE for the mangled name.
+        # For Assign, compile the right-hand side and STORE to resolve(name).
+        # For Block, push a compiler scope, compile nested statements, and pop in finally.
+        # For If, compile the condition and emit a placeholder JZ to the else branch.
+        # Compile the then branch, emit a placeholder JMP to the end, and patch both jumps.
+        # For While, remember the loop start, compile the condition, and JZ to the end.
+        # Compile the body, jump back to the loop start, and patch the exit jump.
+        # For Return, compile the expression or PUSH 0 for bare return, then emit RET.
+        # For Print, compile the expression and emit PRINT.
+        # For ExprStmt, compile the expression and leave the unused result on the stack.
+        # If no isinstance case matches, raise RuntimeError for the unknown statement node.
         raise NotImplementedError("compile_stmt (codegen)")
 
     def compile_expr(self, expr):
@@ -108,6 +121,15 @@ class Compiler:
         # Binary &&/||:  short-circuit using JZ + JMP + PUSH False/True
         # Binary other:  compile both sides; emit the right opcode (ADD/SUB/...)
         # Call:          compile each arg; CALL name
+        # For Number, emit PUSH with the integer value.
+        # For Bool, emit PUSH with the boolean value.
+        # For Var, emit LOAD with the resolved storage name.
+        # For Unary, compile the operand and emit NEG or NOT.
+        # For Binary `&&`, compile left and jump around right when left is false.
+        # For Binary `||`, compile left and jump around right when left is true.
+        # For other Binary operators, compile left then right and emit the matching opcode.
+        # For Call, compile arguments left-to-right, then emit CALL with the function name.
+        # If no isinstance case matches, raise RuntimeError for the unknown expression node.
         raise NotImplementedError("compile_expr (codegen)")
 
 

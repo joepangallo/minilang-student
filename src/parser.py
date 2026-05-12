@@ -200,35 +200,85 @@ class Parser:
     # stmt = block | let | if | while | return | print | assignOrExpr
     def parse_stmt(self):
         # Hint: peek at self.peek().kind and dispatch. LBRACE -> Block(parse_braced_stmts()).
+        # If the next token is `{`, parse the braced statements and wrap them in Block.
+        # If the next token is `let`, call the completed parse_let helper.
+        # If the next token is `if`, call parse_if.
+        # If the next token is `while`, call parse_while.
+        # If the next token is `return`, call parse_return.
+        # If the next token is `print`, call parse_print.
+        # Otherwise parse either an assignment statement or an expression statement.
         raise NotImplementedError("parse_stmt (M2)")
 
     # stmt = 'if' '(' expr ')' stmt ('else' stmt)?
     def parse_if(self):
+        # Consume `if`.
+        # Consume `(`.
+        # Parse the condition expression.
+        # Consume `)`.
+        # Parse the then statement.
+        # If `else` is present, parse the else statement; otherwise use None.
+        # Return an If node with the condition, then branch, and optional else branch.
         raise NotImplementedError("parse_if (M2)")
 
     # stmt = 'while' '(' expr ')' stmt
     def parse_while(self):
+        # Consume `while`.
+        # Consume `(`.
+        # Parse the loop condition expression.
+        # Consume `)`.
+        # Parse the loop body statement.
+        # Return a While node with the condition and body.
         raise NotImplementedError("parse_while (M2)")
 
     # stmt = 'return' expr? ';'
     def parse_return(self):
+        # Consume `return`.
+        # If the next token is `;`, this is a bare return with expr = None.
+        # Otherwise parse the return expression.
+        # Consume the trailing `;`.
+        # Return a Return node containing the expression or None.
         raise NotImplementedError("parse_return (M2)")
 
     # stmt = 'print' '(' expr ')' ';'
     def parse_print(self):
+        # Consume `print`.
+        # Consume `(`.
+        # Parse the expression to print.
+        # Consume `)`.
+        # Consume the trailing `;`.
+        # Return a Print node containing the expression.
         raise NotImplementedError("parse_print (M2)")
 
     # stmt = IDENT '=' expr ';'  |  expr ';'
     # Hint: peek two tokens ahead. If they are IDENT then EQ, it's an assignment.
     def parse_assign_or_expr(self):
+        # If the next token is IDENT and the following token is `=`, parse assignment.
+        # For assignment, consume the name, consume `=`, parse the expression, then consume `;`.
+        # Return an Assign node for the assignment case.
+        # Otherwise parse a normal expression.
+        # Consume the trailing `;`.
+        # Return an ExprStmt node for the expression-statement case.
         raise NotImplementedError("parse_assign_or_expr (M2)")
 
     # fnDecl = 'fun' IDENT '(' params? ')' ':' type block
     def parse_fn(self):
+        # Consume `fun`.
+        # Consume the function name identifier.
+        # Consume `(`.
+        # Parse zero or more comma-separated params until `)`.
+        # Consume `)`.
+        # Consume `:`.
+        # Consume the return type identifier.
+        # Parse the braced function body.
+        # Return an FnDecl node with name, params, return type, and body.
         raise NotImplementedError("parse_fn (M2)")
 
     # param = IDENT ':' type
     def parse_param(self):
+        # Consume the parameter name identifier.
+        # Consume `:`.
+        # Consume the parameter type identifier.
+        # Return the `(name, type)` pair expected by FnDecl.
         raise NotImplementedError("parse_param (M2)")
 
     # ----- expressions (one method per precedence level) -----
@@ -238,35 +288,75 @@ class Parser:
 
     # logicAnd = equality ('&&' equality)*
     def parse_and(self):
+        # Parse the left operand with the next tighter precedence method.
+        # While the next token is `&&`, consume it and parse the right operand.
+        # Wrap each pair in a Binary("&&", left, right) node.
+        # Return the final left-associated expression tree.
         raise NotImplementedError("parse_and (M2)")
 
     # equality = compare (('==' | '!=') compare)*
     def parse_equality(self):
+        # Parse the left operand with parse_comparison.
+        # While the next token is `==` or `!=`, save the operator text.
+        # Consume the operator and parse the right operand with parse_comparison.
+        # Wrap the pieces in a Binary(op, left, right) node.
+        # Return the final left-associated expression tree.
         raise NotImplementedError("parse_equality (M2)")
 
     # compare = term (('<' | '<=' | '>' | '>=') term)*
     def parse_comparison(self):
+        # Parse the left operand with parse_term.
+        # While the next token is `<`, `<=`, `>`, or `>=`, save the operator text.
+        # Consume the operator and parse the right operand with parse_term.
+        # Wrap the pieces in a Binary(op, left, right) node.
+        # Return the final left-associated expression tree.
         raise NotImplementedError("parse_comparison (M2)")
 
     # term = factor (('+' | '-') factor)*
     def parse_term(self):
+        # Parse the left operand with parse_factor.
+        # While the next token is `+` or `-`, save the operator text.
+        # Consume the operator and parse the right operand with parse_factor.
+        # Wrap the pieces in a Binary(op, left, right) node.
+        # Return the final left-associated expression tree.
         raise NotImplementedError("parse_term (M2)")
 
     # factor = unary (('*' | '/') unary)*
     def parse_factor(self):
+        # Parse the left operand with parse_unary.
+        # While the next token is `*` or `/`, save the operator text.
+        # Consume the operator and parse the right operand with parse_unary.
+        # Wrap the pieces in a Binary(op, left, right) node.
+        # Return the final left-associated expression tree.
         raise NotImplementedError("parse_factor (M2)")
 
     # unary = ('-' | '!')? call
     def parse_unary(self):
+        # If the next token is unary `-` or `!`, save and consume the operator.
+        # Recursively parse the operand with parse_unary.
+        # Return a Unary node for the prefix operator case.
+        # Otherwise parse and return a call expression.
         raise NotImplementedError("parse_unary (M2)")
 
     # call = primary ('(' args? ')')?
     # Hint: check IDENT followed by LPAREN to detect a call. Otherwise just parse_primary.
     def parse_call(self):
+        # If the next two tokens are IDENT then `(`, parse a function call.
+        # For a call, consume the function name and the opening `(`.
+        # Parse zero or more comma-separated argument expressions until `)`.
+        # Consume the closing `)`.
+        # Return a Call node with the function name and argument list.
+        # If no call pattern is present, return parse_primary().
         raise NotImplementedError("parse_call (M2)")
 
     # primary = NUMBER | 'true' | 'false' | IDENT | '(' expr ')'
     def parse_primary(self):
+        # If the next token is NUMBER, consume it and return Number(token.value).
+        # If the next token is `true`, consume it and return Bool(True).
+        # If the next token is `false`, consume it and return Bool(False).
+        # If the next token is IDENT, consume it and return Var(token.text).
+        # If the next token is `(`, consume it, parse an expression, consume `)`, and return the expression.
+        # Otherwise raise SyntaxError that names the unexpected token and line.
         raise NotImplementedError("parse_primary (M2)")
 
 

@@ -92,6 +92,21 @@ class TypeChecker:
         #   Return:    if expr is None, current_return must be void; else types must match
         #   Print:     expr type must be int or bool
         #   ExprStmt:  just check_expr
+        # Check Let before Assign because both mention names but have different rules.
+        # For Let, compute the initializer type and compare it to stmt.type.
+        # Raise TypeError_ if the initializer type does not match the declared type.
+        # Declare the new variable only after the initializer has checked successfully.
+        # For Assign, look up the existing variable type.
+        # Raise TypeError_ if the assigned name does not exist.
+        # Compute the right-hand side type and compare it to the existing type.
+        # For Block, push a scope, check every nested statement, and pop in finally.
+        # For If, require the condition type to be bool.
+        # Check the then branch and, if present, the else branch.
+        # For While, require the condition type to be bool and check the loop body.
+        # For Return, compare the optional expression type to self.current_return.
+        # For Print, allow only int and bool expressions.
+        # For ExprStmt, check the expression and ignore the resulting type.
+        # If no isinstance case matches, raise TypeError_ for the unknown statement node.
         raise NotImplementedError("check_stmt (M3)")
 
     # ----- expressions (Number/Bool/Var done; rest TODO) -----
@@ -107,6 +122,20 @@ class TypeChecker:
 
         # TODO M3: handle Unary, Binary, Call. See "Type rules summary"
         # in the file header. Raise TypeError_ with a useful message on any mismatch.
+        # For Unary, check the operand type before deciding the result type.
+        # Unary `-` requires int and returns int.
+        # Unary `!` requires bool and returns bool.
+        # For Binary, check the left and right operand types.
+        # Arithmetic operators require int/int and return int.
+        # Comparison operators require int/int and return bool.
+        # Equality operators require both sides to have the same type and return bool.
+        # Logical operators require bool/bool and return bool.
+        # For Call, look up the function signature in self.fns.
+        # Raise TypeError_ if the function name is unknown.
+        # Check that the number of arguments matches the signature.
+        # Check each argument type against the corresponding parameter type.
+        # Return the function signature's return type.
+        # If no isinstance case matches, raise TypeError_ for the unknown expression node.
         raise NotImplementedError(f"check_expr: {type(expr).__name__} (M3)")
 
 

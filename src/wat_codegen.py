@@ -133,6 +133,19 @@ class WatCompiler:
         # Return:  compile expr (or i32.const 0); emit "return"
         # Print:   compile expr; emit "call $print"
         # ExprStmt: compile expr; emit "drop"
+        # For Let, compile the initializer so the value is on the wasm stack.
+        # Declare the local to reserve its mangled `(local ...)` entry.
+        # Emit `local.set` for that local.
+        # For Assign, compile the right-hand side and emit `local.set` for resolve(name).
+        # For Block, push a new scope, compile nested statements, and pop in finally.
+        # For If, compile the condition, emit `if`, compile the then branch, optional `else`, and `end`.
+        # For While, emit `block` and `loop` before compiling the condition.
+        # In While, emit `i32.eqz` and `br_if 1` to leave the loop when the condition is false.
+        # Compile the body, emit `br 0` to repeat, then close both structures with `end`.
+        # For Return, compile the expression or `i32.const 0` for bare return, then emit `return`.
+        # For Print, compile the expression and emit `call $print`.
+        # For ExprStmt, compile the expression and emit `drop`.
+        # If no isinstance case matches, raise RuntimeError for the unknown statement node.
         raise NotImplementedError("wat compile_stmt (M5-M7)")
 
     def compile_expr(self, expr):
@@ -153,6 +166,16 @@ class WatCompiler:
         # Other binary: compile both sides; emit the right opcode from the
         #     cheatsheet (i32.add / i32.sub / i32.mul / i32.div_s / i32.lt_s / etc.)
         # Call:   compile each arg; emit f"call ${name}"
+        # For Number, emit `i32.const` with the integer value.
+        # For Bool, emit `i32.const 1` for true or `i32.const 0` for false.
+        # For Var, emit `local.get` for resolve(name).
+        # For Unary `-`, emit zero, compile the operand, then emit `i32.sub`.
+        # For Unary `!`, compile the operand, then emit `i32.eqz`.
+        # For Binary `&&`, compile left and use `if (result i32)` to short-circuit false.
+        # For Binary `||`, compile left and use `if (result i32)` to short-circuit true.
+        # For other Binary operators, compile left then right and emit the matching WAT opcode.
+        # For Call, compile arguments left-to-right, then emit `call $name`.
+        # If no isinstance case matches, raise RuntimeError for the unknown expression node.
         raise NotImplementedError("wat compile_expr (M5-M7)")
 
 

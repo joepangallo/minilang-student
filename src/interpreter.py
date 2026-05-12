@@ -83,6 +83,17 @@ class Interpreter:
         # Return: raise _ReturnSignal(value)
         # Print:  emit 1 / 0 for True / False, else just print the int
         # ExprStmt: just evaluate, discard result
+        # For Let, evaluate the initializer first, then declare the variable.
+        # For Assign, evaluate the right-hand side first, then update the nearest binding.
+        # For Block, push a new scope before running nested statements.
+        # Use try/finally for Block so returns still pop the scope.
+        # For If, evaluate the condition and run exactly one branch.
+        # For While, keep evaluating the condition before each body execution.
+        # For Return, evaluate the expression if present, otherwise use None.
+        # Raise _ReturnSignal with the return value so call_fn can catch it.
+        # For Print, evaluate the expression before formatting booleans as 1 or 0.
+        # For ExprStmt, evaluate the expression and discard the result.
+        # If no isinstance case matches, raise RuntimeError for the unknown statement node.
         raise NotImplementedError("exec_stmt (M4)")
 
     # ----- expressions (Number/Bool/Var done; rest TODO) -----
@@ -97,6 +108,17 @@ class Interpreter:
         #   Binary:   short-circuit && and || FIRST, then arithmetic / compare.
         #             Wrap arithmetic with i32(). DIV by zero -> RuntimeError.
         #   Call:     return self.call_fn(name, [eval each arg])
+        # For Unary, evaluate the operand once.
+        # Unary `-` returns i32(-operand).
+        # Unary `!` returns `not operand`.
+        # For Binary `&&`, evaluate the left side first and return False if it is falsey.
+        # For Binary `||`, evaluate the left side first and return True if it is truthy.
+        # For other Binary operators, evaluate left and right operands.
+        # Arithmetic operators return i32-wrapped results.
+        # Division must check for zero and truncate toward zero.
+        # Comparison and equality operators return Python booleans.
+        # For Call, evaluate arguments left-to-right and pass their values to call_fn.
+        # If no isinstance case matches, raise RuntimeError for the unknown expression node.
         raise NotImplementedError(f"eval_expr: {type(expr).__name__} (M4)")
 
     # ----- TODO M4: call_fn -----
@@ -106,6 +128,15 @@ class Interpreter:
         # parameter, run the body inside a try/except _ReturnSignal, restore
         # scopes, return the captured value (or None if the function fell
         # through without `return`).
+        # Look up the function declaration by name in self.fns.
+        # Raise RuntimeError if the function name is unknown.
+        # Save the caller's current scope stack.
+        # Replace self.scopes with a fresh function-local scope stack.
+        # Bind each parameter name to the corresponding value from arg_values.
+        # Execute each statement in the function body.
+        # If _ReturnSignal is raised, capture and return its value.
+        # If the body finishes normally, return None.
+        # Restore the caller's original scope stack in finally before returning.
         raise NotImplementedError("call_fn (M4)")
 
 

@@ -138,6 +138,25 @@ class Lexer:
           - Return `Token(KIND, text, value_or_None, self.line)` -- but use
             the line at the START of the token, not after advancing.
         """
+        # Save `self.line` now so multi-character tokens report their start line.
+        # If the current character is whitespace, consume the whitespace run.
+        # Return None after whitespace so `lex()` skips it.
+        # If the next two characters are `//`, consume until newline or EOF.
+        # Return None after a line comment so `lex()` skips it.
+        # If the next two characters are `/*`, consume until the matching `*/`.
+        # Raise SyntaxError if EOF arrives before the block comment closes.
+        # Return None after a block comment so `lex()` skips it.
+        # If the current character is a digit, remember the starting index.
+        # Advance while the current character is still a digit.
+        # Slice out the number text and return a NUMBER token with int(text).
+        # If the current character begins an identifier, remember the start.
+        # Advance while the character is alphanumeric or `_`.
+        # Slice out the identifier text and look it up in KEYWORDS.
+        # Return either the keyword token kind or IDENT.
+        # Check two-character operators before one-character operators.
+        # If a two-character operator matches, consume both characters and return it.
+        # If a one-character operator or punctuation matches, consume and return it.
+        # Anything left is not MiniLang syntax, so raise SyntaxError with the line.
         raise NotImplementedError("Lexer.next_token -- implement me (Milestone M1)")
 
 
