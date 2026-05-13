@@ -123,6 +123,10 @@ class WatCompiler:
     # ----- TODO M5-M7 -----
 
     def compile_stmt(self, stmt):
+        # Note on formatting: self.indent only affects the leading whitespace
+        # in the emitted WAT and has no effect on the resulting wasm. If your
+        # output looks slightly different from the reference (extra or missing
+        # spaces inside `if`/`block`/`loop`), don't worry -- both are valid.
         # Let:     compile_expr(stmt.expr); wat = self.declare_local(stmt.name);
         #          self.emit(f"local.set {wat}")
         # Assign:  compile_expr; self.emit(f"local.set {self.resolve(name)}")

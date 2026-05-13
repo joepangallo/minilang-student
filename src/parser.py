@@ -252,6 +252,8 @@ class Parser:
     # stmt = IDENT '=' expr ';'  |  expr ';'
     # Hint: peek two tokens ahead. If they are IDENT then EQ, it's an assignment.
     def parse_assign_or_expr(self):
+        # Use self.peek_kind(0) for the current token and self.peek_kind(1) to
+        # look one token ahead -- this is the two-token lookahead you need.
         # If the next token is IDENT and the following token is `=`, parse assignment.
         # For assignment, consume the name, consume `=`, parse the expression, then consume `;`.
         # Return an Assign node for the assignment case.
@@ -298,6 +300,8 @@ class Parser:
     def parse_equality(self):
         # Parse the left operand with parse_comparison.
         # While the next token is `==` or `!=`, save the operator text.
+        # Tip: the token's `.text` field already holds the operator string
+        # ("==", "!=", "<", "+", etc.), so `op = self.advance().text` works.
         # Consume the operator and parse the right operand with parse_comparison.
         # Wrap the pieces in a Binary(op, left, right) node.
         # Return the final left-associated expression tree.
