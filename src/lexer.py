@@ -1,23 +1,35 @@
-# lexer.py
-# Stage 1 of the compiler: turn source text into a list of "tokens".
+# src/lexer.py
+# MILESTONE M1 -- the lexer.
 #
-# A token is the smallest meaningful chunk of code: a keyword like `let`,
-# a name like `x`, a number like `10`, or a symbol like `+` or `;`.
-# The parser (stage 2) reads tokens, not raw text.
+# Your job: take a string of MiniLang source code and produce a list of
+# Token objects. The parser (M2) will read those tokens, not the raw text.
+#
+# Everything you NEED is already in this file -- Token class, token-kind
+# constants, the KEYWORDS table, and the Lexer skeleton with low-level
+# helpers (peek, advance, at_end, lex). The only piece you have to write
+# yourself is `Lexer.next_token`. That method picks the next token out
+# of `self.src` starting at `self.pos`.
+#
+# Suggested order of attack:
+#   1. Skip whitespace.
+#   2. Skip `//` line comments and `/* ... */` block comments.
+#   3. Recognize NUMBER (a run of digits).
+#   4. Recognize IDENT / keywords (letter or underscore, then alphanumerics).
+#   5. Recognize two-character operators (== != <= >= && ||).
+#   6. Recognize one-character operators and punctuation.
+#   7. On anything unrecognized: raise SyntaxError with the line number.
+#
+# When you're done, this should work:
+#   python3 minilang.py tokens examples/ladder/01-literal.ml
+# and produce a token list ending in EOF.
 
 # ---------------------------------------------------------------------------
-# Token kinds.
-#
-# We just use short uppercase strings. They're easy to print and easy to
-# compare. (A more "Pythonic" version would use an Enum, but strings keep
-# things simple for an intro class.)
+# Token kinds (string constants -- compare with `tok.kind == NUMBER`).
 # ---------------------------------------------------------------------------
 
-# literals and names
 NUMBER  = "NUMBER"
 IDENT   = "IDENT"
 
-# keywords
 LET     = "LET"
 IF      = "IF"
 ELSE    = "ELSE"
@@ -28,37 +40,18 @@ TRUE    = "TRUE"
 FALSE   = "FALSE"
 PRINT   = "PRINT"
 
-# one-character symbols
-PLUS    = "PLUS"     # +
-MINUS   = "MINUS"    # -
-STAR    = "STAR"     # *
-SLASH   = "SLASH"    # /
-LT      = "LT"       # <
-GT      = "GT"       # >
-EQ      = "EQ"       # =
-BANG    = "BANG"     # !
-LPAREN  = "LPAREN"   # (
-RPAREN  = "RPAREN"   # )
-LBRACE  = "LBRACE"   # {
-RBRACE  = "RBRACE"   # }
-COLON   = "COLON"    # :
-SEMI    = "SEMI"     # ;
-COMMA   = "COMMA"    # ,
+PLUS, MINUS, STAR, SLASH = "PLUS", "MINUS", "STAR", "SLASH"
+LT, GT, EQ, BANG         = "LT", "GT", "EQ", "BANG"
+LPAREN, RPAREN           = "LPAREN", "RPAREN"
+LBRACE, RBRACE           = "LBRACE", "RBRACE"
+COLON, SEMI, COMMA       = "COLON", "SEMI", "COMMA"
 
-# two-character symbols
-EQEQ    = "EQEQ"     # ==
-BANGEQ  = "BANGEQ"   # !=
-LE      = "LE"       # <=
-GE      = "GE"       # >=
-AND     = "AND"      # &&
-OR      = "OR"       # ||
+EQEQ, BANGEQ = "EQEQ", "BANGEQ"
+LE, GE       = "LE", "GE"
+AND, OR      = "AND", "OR"
 
-# end-of-file marker (always the last token)
-EOF     = "EOF"
+EOF = "EOF"
 
-
-# Map a keyword's spelling to its token kind. If a word isn't here,
-# it's an identifier (a variable or function name).
 KEYWORDS = {
     "let":    LET,
     "if":     IF,
@@ -77,148 +70,99 @@ KEYWORDS = {
 # ---------------------------------------------------------------------------
 
 class Token:
-    """One token: a kind tag, the source text it came from, an optional value, and a line number."""
     def __init__(self, kind, text, value, line):
-        self.kind = kind     # one of the constants above, e.g. NUMBER
-        self.text = text     # the exact substring of the source, e.g. "10"
-        self.value = value   # for NUMBER: the int 10. Otherwise None.
-        self.line = line     # line number, for error messages
+        self.kind = kind     # e.g. NUMBER, IDENT, LET, ...
+        self.text = text     # exact source substring, e.g. "10"
+        self.value = value   # for NUMBER: the int. Else None.
+        self.line = line
 
     def __repr__(self):
-        # Pretty-print tokens for the `tokens` command.
         if self.value is not None:
             return f"{self.kind:7} {self.text!r:10} (value={self.value})  line {self.line}"
         return f"{self.kind:7} {self.text!r:10}                line {self.line}"
 
 
 # ---------------------------------------------------------------------------
-# Lexer: walks the source string one character at a time and produces tokens.
+# Lexer
 # ---------------------------------------------------------------------------
 
 class Lexer:
-    """Walks the source string and produces a stream of tokens."""
     def __init__(self, src):
         self.src = src
-        self.pos = 0      # index of the next character to read
-        self.line = 1     # current line number (for error messages)
+        self.pos = 0
+        self.line = 1
 
-    # --- low-level helpers ---------------------------------------------------
+    # ----- low-level helpers (already done) -----
 
     def at_end(self):
         return self.pos >= len(self.src)
 
     def peek(self, offset=0):
-        """Look at a character without consuming it."""
+        """Return the character `offset` ahead, or '' if past end."""
         i = self.pos + offset
-        if i < len(self.src):
-            return self.src[i]
-        return ""   # empty string means "past the end"
+        return self.src[i] if i < len(self.src) else ""
 
     def advance(self):
-        """Consume the current character and return it."""
+        """Consume and return the current character."""
         c = self.src[self.pos]
         self.pos += 1
-        # bump the line counter so error messages stay accurate
         if c == "\n":
             self.line += 1
         return c
 
-    # --- main entry point ---------------------------------------------------
+    # ----- main loop (already done) -----
 
     def lex(self):
-        """Run the lexer and return a list of tokens (ending in EOF)."""
         tokens = []
         while not self.at_end():
             tok = self.next_token()
-            if tok is not None:        # whitespace/comments return None
+            if tok is not None:           # whitespace/comments return None
                 tokens.append(tok)
         tokens.append(Token(EOF, "", None, self.line))
         return tokens
 
-    # --- pick the next token ------------------------------------------------
+    # ----- TODO M1: the one method you have to write -----
 
     def next_token(self):
-        """Read one token from the current position, or return None for whitespace/comments."""
-        c = self.peek()
+        """Read the next token from the source, starting at self.pos.
 
-        # skip whitespace
-        if c in " \t\r\n":
-            self.advance()
-            return None
+        Returns a Token, or None for whitespace/comments.
+        Raises SyntaxError on an unrecognized character.
 
-        # skip "// line comments"
-        if c == "/" and self.peek(1) == "/":
-            while not self.at_end() and self.peek() != "\n":
-                self.advance()
-            return None
-
-        # skip "/* block comments */"
-        if c == "/" and self.peek(1) == "*":
-            self.advance(); self.advance()
-            while not self.at_end() and not (self.peek() == "*" and self.peek(1) == "/"):
-                self.advance()
-            if not self.at_end():
-                self.advance(); self.advance()    # consume the closing "*/"
-            return None
-
-        # numbers: a run of digits
-        if c.isdigit():
-            return self.number()
-
-        # identifiers or keywords: start with letter or _, then letters/digits/_
-        if c.isalpha() or c == "_":
-            return self.identifier()
-
-        # two-character symbols: check these before single-character ones,
-        # otherwise "==" would lex as two separate "=" tokens
-
-        two = self.src[self.pos:self.pos + 2]
-        two_char = {
-            "==": EQEQ, "!=": BANGEQ,
-            "<=": LE,   ">=": GE,
-            "&&": AND,  "||": OR,
-        }
-        if two in two_char:
-            self.advance(); self.advance()
-            return Token(two_char[two], two, None, self.line)
-
-        # single-character symbols
-        one_char = {
-            "+": PLUS, "-": MINUS, "*": STAR, "/": SLASH,
-            "<": LT,   ">": GT,    "=": EQ,   "!": BANG,
-            "(": LPAREN, ")": RPAREN, "{": LBRACE, "}": RBRACE,
-            ":": COLON,  ";": SEMI,    ",": COMMA,
-        }
-        if c in one_char:
-            self.advance()
-            return Token(one_char[c], c, None, self.line)
-
-        # anything else is an error
-        raise SyntaxError(f"line {self.line}: unexpected character {c!r}")
-
-    # --- multi-character token helpers --------------------------------------
-
-    def number(self):
-        """Consume a run of digits and return a NUMBER token."""
-        start = self.pos
-        while not self.at_end() and self.peek().isdigit():
-            self.advance()
-        text = self.src[start:self.pos]
-        return Token(NUMBER, text, int(text), self.line)
-
-    def identifier(self):
-        """Consume a name and return a keyword token if it matches, otherwise IDENT."""
-        start = self.pos
-        while not self.at_end() and (self.peek().isalnum() or self.peek() == "_"):
-            self.advance()
-        text = self.src[start:self.pos]
-        # if it's a keyword, use that kind; otherwise it's a plain identifier
-        kind = KEYWORDS.get(text, IDENT)
-        return Token(kind, text, None, self.line)
+        Hints:
+          - `self.peek()` looks at the current char without consuming.
+          - `self.peek(1)` looks one ahead (for two-char operators like '==').
+          - `self.advance()` consumes one char and returns it.
+          - For NUMBER, walk while `self.peek().isdigit()`.
+          - For IDENT/keywords, walk while alnum or '_', then look up in KEYWORDS.
+          - Return `Token(KIND, text, value_or_None, self.line)` -- but use
+            the line at the START of the token, not after advancing.
+        """
+        # Save `self.line` now so multi-character tokens report their start line.
+        # If the current character is whitespace, consume the whitespace run.
+        # Return None after whitespace so `lex()` skips it.
+        # If the next two characters are `//`, consume until newline or EOF.
+        # Return None after a line comment so `lex()` skips it.
+        # If the next two characters are `/*`, consume until the matching `*/`.
+        # Raise SyntaxError if EOF arrives before the block comment closes.
+        # Return None after a block comment so `lex()` skips it.
+        # If the current character is a digit, remember the starting index.
+        # Advance while the current character is still a digit.
+        # Slice out the number text and return a NUMBER token with int(text).
+        # If the current character begins an identifier, remember the start.
+        # Advance while the character is alphanumeric or `_`.
+        # Slice out the identifier text and look it up in KEYWORDS.
+        # Return either the keyword token kind or IDENT.
+        # Check two-character operators before one-character operators.
+        # If a two-character operator matches, consume both characters and return it.
+        # If a one-character operator or punctuation matches, consume and return it.
+        # Anything left is not MiniLang syntax, so raise SyntaxError with the line.
+        raise NotImplementedError("Lexer.next_token -- implement me (Milestone M1)")
 
 
-# Convenience function so callers can write `lex(src)` instead of building
-# a Lexer object themselves.
+# ---------------------------------------------------------------------------
+# Convenience entry point used by minilang.py
+# ---------------------------------------------------------------------------
+
 def lex(src):
-    """Tokenize a source string and return the list of tokens."""
     return Lexer(src).lex()
